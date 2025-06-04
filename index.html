@@ -3,40 +3,221 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Telegram Web App</title>
+  <title>Календарь услуг</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script> 
   <style>
     body {
-      font-family: sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f2f2f7;
+      color: #333;
+    }
+    header {
+      background: #007aff;
+      color: white;
+      padding: 15px;
       text-align: center;
-      padding: 20px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+    main {
+      padding: 16px;
+    }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .day {
+      background: white;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .day.active {
+      border: 2px solid #007aff;
+    }
+    .form-group {
+      margin-bottom: 12px;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 4px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
     }
     button {
-      padding: 10px 20px;
-      font-size: 16px;
+      background-color: #007aff;
+      color: white;
+      border: none;
+      font-weight: bold;
+    }
+    .stats {
+      margin-top: 20px;
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+    }
+    .entry-list {
+      margin-top: 20px;
+    }
+    .entry {
+      background: white;
+      padding: 10px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
   </style>
 </head>
 <body>
-  <h1>Привет из Telegram Web App!</h1>
-  <p id="user-data">Загрузка данных...</p>
-  <button onclick="sendData()">Отправить сообщение боту</button>
+  <header>Календарь услуг</header>
+  <main>
+    <div class="calendar" id="calendar"></div>
+
+    <h3>Добавить запись</h3>
+    <div class="form-group">
+      <label>Дата</label>
+      <input type="text" id="selectedDate" readonly />
+    </div>
+    <div class="form-group">
+      <label>Время</label>
+      <input type="time" id="time" />
+    </div>
+    <div class="form-group">
+      <label>Услуга</label>
+      <select id="service">
+        <option value="Макияж">Макияж</option>
+        <option value="Мастер-класс">Мастер-класс</option>
+        <option value="Полный образ">Полный образ</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Доход (₽)</label>
+      <input type="number" id="income" placeholder="Например: 3000" />
+    </div>
+    <div class="form-group">
+      <label>Расходы (материалы, ₽)</label>
+      <input type="number" id="expenses" placeholder="Например: 500" />
+    </div>
+    <button onclick="saveEntry()">Сохранить</button>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="entry-list" id="entryList"></div>
+  </main>
 
   <script>
     const tg = window.Telegram.WebApp;
-
     tg.ready();
 
-    // Получаем данные пользователя
-    const user = tg.initDataUnsafe?.user;
-    if (user) {
-      document.getElementById('user-data').innerText =
-        `Привет, ${user.first_name} (${user.id})`;
+    const calendarEl = document.getElementById('calendar');
+    const selectedDateEl = document.getElementById('selectedDate');
+    const entryListEl = document.getElementById('entryList');
+    const statsEl = document.getElementById('stats');
+
+    let selectedDate = '';
+    const entriesKey = 'calendarEntries';
+
+    function loadCalendar(monthOffset = 0) {
+      const now = new Date();
+      now.setMonth(now.getMonth() + monthOffset);
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const startDay = firstDay.getDay() || 7;
+
+      calendarEl.innerHTML = '';
+
+      // Empty cells
+      for (let i = 1; i < startDay; i++) {
+        const div = document.createElement('div');
+        calendarEl.appendChild(div);
+      }
+
+      for (let day = 1; day <= lastDay.getDate(); day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const div = document.createElement('div');
+        div.className = 'day';
+        if (dateStr === selectedDate) div.classList.add('active');
+        div.innerText = day;
+        div.onclick = () => {
+          selectedDate = dateStr;
+          selectedDateEl.value = dateStr;
+          renderEntries();
+          loadCalendar(monthOffset);
+        };
+        calendarEl.appendChild(div);
+      }
     }
 
-    function sendData() {
-      tg.sendData("Пользователь нажал кнопку!");
+    function saveEntry() {
+      if (!selectedDate) return alert('Выберите дату');
+      const time = document.getElementById('time').value;
+      const service = document.getElementById('service').value;
+      const income = parseFloat(document.getElementById('income').value) || 0;
+      const expenses = parseFloat(document.getElementById('expenses').value) || 0;
+
+      if (!time) return alert('Введите время');
+
+      const entries = JSON.parse(localStorage.getItem(entriesKey) || "[]");
+      entries.push({ date: selectedDate, time, service, income, expenses });
+      localStorage.setItem(entriesKey, JSON.stringify(entries));
+
+      document.getElementById('time').value = '';
+      document.getElementById('income').value = '';
+      document.getElementById('expenses').value = '';
+
+      renderEntries();
+      renderStats();
     }
+
+    function renderEntries() {
+      const entries = JSON.parse(localStorage.getItem(entriesKey) || "[]").filter(e => e.date === selectedDate);
+      entryListEl.innerHTML = '';
+      entries.forEach(entry => {
+        const div = document.createElement('div');
+        div.className = 'entry';
+        div.innerHTML = `
+          <strong>${entry.time}</strong><br>
+          ${entry.service}<br>
+          Доход: ${entry.income} ₽<br>
+          Расходы: ${entry.expenses} ₽
+        `;
+        entryListEl.appendChild(div);
+      });
+    }
+
+    function renderStats() {
+      const entries = JSON.parse(localStorage.getItem(entriesKey) || "[]");
+
+      const today = new Date().toISOString().split('T')[0];
+      const thisMonth = today.slice(0, 7);
+
+      const totalToday = entries.filter(e => e.date === today)
+        .reduce((sum, e) => sum + e.income - e.expenses, 0);
+
+      const totalMonth = entries.filter(e => e.date.startsWith(thisMonth))
+        .reduce((sum, e) => sum + e.income - e.expenses, 0);
+
+      const totalAll = entries.reduce((sum, e) => sum + e.income - e.expenses, 0);
+
+      statsEl.innerHTML = `
+        <h4>Статистика</h4>
+        <p>Сегодня: ${totalToday.toFixed(2)} ₽</p>
+        <p>Этот месяц: ${totalMonth.toFixed(2)} ₽</p>
+        <p>Общий доход: ${totalAll.toFixed(2)} ₽</p>
+      `;
+    }
+
+    loadCalendar();
+    renderStats();
   </script>
 </body>
 </html>
