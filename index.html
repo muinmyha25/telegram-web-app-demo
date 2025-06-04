@@ -25,11 +25,10 @@
     }
     .calendar {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
       gap: 8px;
       margin-top: 16px;
     }
-    .day {
+    .day, .month {
       background: white;
       border-radius: 8px;
       padding: 10px;
@@ -70,6 +69,15 @@
       margin-bottom: 8px;
       border-radius: 8px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Сетка месяцев */
+    .month {
+      width: calc(33.33%); /* 3 колонки */
+      margin-bottom: 16px;
+    }
+    .calendar {
+      grid-template-columns: repeat(3, 1fr); /* 3 колонки */
     }
   </style>
 </head>
@@ -128,10 +136,10 @@
     const backBtn = document.getElementById('backBtn');
     const nextBtn = document.getElementById('nextBtn');
 
-    let currentView = 'year';
+    let currentView = 'year'; // year | months-grid | day
     let currentYear = new Date().getFullYear();
-    let currentMonthOffset = 0;
-    let selectedMonth = new Date().getMonth();
+    let currentMonthOffset = 0; // offset from current month
+    let selectedMonth = new Date().getMonth(); // 0-11
     let selectedDate = '';
     const user = tg.initDataUnsafe?.user;
     const userId = user ? user.id : 'unknown';
@@ -153,31 +161,33 @@
         div.innerText = i;
         div.onclick = () => {
           currentYear = i;
-          showMonths();
+          showMonthsGrid(i);
         };
         calendarEl.appendChild(div);
       }
     }
 
-    function showMonths() {
-      currentView = 'month';
+    function showMonthsGrid(year) {
+      currentView = 'months-grid';
       updateNavVisibility();
-      monthTitle.textContent = currentYear;
-      calendarEl.innerHTML = '';
-      const monthNames = ["Янв", "Фев", "Мар", "Апр", "Май", "Июн",
-                          "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"];
+      monthTitle.textContent = year;
 
-      monthNames.forEach((name, index) => {
+      calendarEl.innerHTML = '';
+
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+      for (let i = 0; i < 12; i++) {
         const div = document.createElement('div');
-        div.className = 'day';
-        div.innerText = name;
+        div.className = 'month';
+        div.innerText = monthNames[i];
         div.onclick = () => {
-          selectedMonth = index;
-          currentMonthOffset = (currentYear - new Date().getFullYear()) * 12 + index - new Date().getMonth();
+          selectedMonth = i;
+          currentMonthOffset = (year - new Date().getFullYear()) * 12 + i - new Date().getMonth();
           loadCalendar(currentMonthOffset);
         };
         calendarEl.appendChild(div);
-      });
+      }
     }
 
     function loadCalendar(monthOffset = 0) {
@@ -225,7 +235,7 @@
           selectedDate = dateStr;
           selectedDateEl.value = dateStr;
           renderEntries();
-          loadCalendar(monthOffset);
+          loadCalendar(currentMonthOffset);
         };
         calendarEl.appendChild(div);
       }
@@ -307,9 +317,9 @@
       if (currentView === 'year') {
         currentYear--;
         showYears();
-      } else if (currentView === 'month') {
+      } else if (currentView === 'months-grid') {
         currentYear--;
-        showMonths();
+        showMonthsGrid(currentYear);
       } else if (currentView === 'day') {
         currentMonthOffset--;
         loadCalendar(currentMonthOffset);
@@ -320,9 +330,9 @@
       if (currentView === 'year') {
         currentYear++;
         showYears();
-      } else if (currentView === 'month') {
+      } else if (currentView === 'months-grid') {
         currentYear++;
-        showMonths();
+        showMonthsGrid(currentYear);
       } else if (currentView === 'day') {
         currentMonthOffset++;
         loadCalendar(currentMonthOffset);
