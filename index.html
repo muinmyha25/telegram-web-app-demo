@@ -164,6 +164,7 @@
       currentView = 'year';
       updateNavVisibility();
       monthTitle.textContent = currentYear;
+
       calendarEl.innerHTML = '';
 
       for (let i = currentYear - 10; i <= currentYear + 10; i++) {
@@ -267,7 +268,6 @@
           selectedDate = dateStr;
           selectedDateEl.value = dateStr;
           renderEntries();
-          loadCalendar(monthOffset);
         };
         calendarEl.appendChild(div);
       }
