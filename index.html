@@ -86,7 +86,13 @@
       color: #155724;
     }
 
-    /* Стрелки меньше */
+    /* День с записями */
+    .day.has-entries {
+      background-color: #d4edda !important;
+      color: #155724;
+    }
+
+    /* Меньше стрелок */
     #backBtn, #nextBtn {
       font-size: 16px;
       padding: 5px 10px;
@@ -104,32 +110,35 @@
 
     <div class="calendar" id="calendar"></div>
 
-    <h3>Добавить запись</h3>
-    <div class="form-group">
-      <label>Дата</label>
-      <input type="text" id="selectedDate" readonly />
+    <!-- Форма добавления записи -->
+    <div id="addForm" style="display:none;">
+      <h3>Добавить запись</h3>
+      <div class="form-group">
+        <label>Дата</label>
+        <input type="text" id="selectedDate" readonly />
+      </div>
+      <div class="form-group">
+        <label>Время</label>
+        <input type="time" id="time" />
+      </div>
+      <div class="form-group">
+        <label>Услуга</label>
+        <select id="service">
+          <option value="Макияж">Макияж</option>
+          <option value="Мастер-класс">Мастер-класс</option>
+          <option value="Полный образ">Полный образ</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Доход (₽)</label>
+        <input type="number" id="income" placeholder="Например: 3000" />
+      </div>
+      <div class="form-group">
+        <label>Расходы (материалы, ₽)</label>
+        <input type="number" id="expenses" placeholder="Например: 500" />
+      </div>
+      <button onclick="saveEntry()">Сохранить</button>
     </div>
-    <div class="form-group">
-      <label>Время</label>
-      <input type="time" id="time" />
-    </div>
-    <div class="form-group">
-      <label>Услуга</label>
-      <select id="service">
-        <option value="Макияж">Макияж</option>
-        <option value="Мастер-класс">Мастер-класс</option>
-        <option value="Полный образ">Полный образ</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Доход (₽)</label>
-      <input type="number" id="income" placeholder="Например: 3000" />
-    </div>
-    <div class="form-group">
-      <label>Расходы (материалы, ₽)</label>
-      <input type="number" id="expenses" placeholder="Например: 500" />
-    </div>
-    <button onclick="saveEntry()">Сохранить</button>
 
     <div class="stats" id="stats"></div>
     <div class="entry-list" id="entryList"></div>
@@ -146,6 +155,7 @@
     const monthTitle = document.getElementById('monthTitle');
     const backBtn = document.getElementById('backBtn');
     const nextBtn = document.getElementById('nextBtn');
+    const addForm = document.getElementById('addForm');
 
     let currentView = 'year'; // year | months-grid | day
     let currentYear = new Date().getFullYear();
@@ -177,6 +187,8 @@
         };
         calendarEl.appendChild(div);
       }
+
+      renderStatsForYear(currentYear);
     }
 
     function showMonthsGrid(year) {
@@ -186,8 +198,8 @@
 
       calendarEl.innerHTML = '';
 
-      const monthNames = ["Янв", "Фев", "Мар", "Апр", "Май", "Июн",
-                          "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"];
+      const monthNames = ["Янв", "Фев", "Мар", "Апр", "Май", "Июнь",
+                          "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
 
       const entries = JSON.parse(localStorage.getItem(`calendarEntries_${userId}`) || "[]");
 
@@ -213,6 +225,8 @@
         };
         calendarEl.appendChild(div);
       }
+
+      renderStatsForYear(year);
     }
 
     function loadCalendar(monthOffset = 0) {
@@ -233,7 +247,7 @@
 
       const entries = JSON.parse(localStorage.getItem(`calendarEntries_${userId}`) || "[]");
 
-      const monthEntries = entries.filter(e => e.date.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`);
+      const monthEntries = entries.filter(e => e.date.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`));
       const totalIncome = monthEntries.reduce((sum, e) => sum + (e.income - e.expenses), 0);
 
       statsEl.innerHTML = `
@@ -268,9 +282,12 @@
           selectedDate = dateStr;
           selectedDateEl.value = dateStr;
           renderEntries();
+          toggleAddForm(true);
         };
         calendarEl.appendChild(div);
       }
+
+      toggleAddForm(false);
     }
 
     function saveEntry() {
@@ -303,6 +320,7 @@
 
       renderEntries();
       renderStats();
+      toggleAddForm(false);
     }
 
     function renderEntries() {
@@ -343,6 +361,23 @@
         <p>Этот месяц: ${totalMonth.toFixed(2)} ₽</p>
         <p>Общий доход: ${totalAll.toFixed(2)} ₽</p>
       `;
+    }
+
+    function renderStatsForYear(year) {
+      const key = `calendarEntries_${userId}`;
+      const entries = JSON.parse(localStorage.getItem(key) || "[]");
+
+      const yearEntries = entries.filter(e => e.date.startsWith(year));
+      const totalIncome = yearEntries.reduce((sum, e) => sum + (e.income - e.expenses), 0);
+
+      statsEl.innerHTML = `
+        <h4>Статистика за ${year}</h4>
+        <p>Доход за год: ${totalIncome.toFixed(2)} ₽</p>
+      `;
+    }
+
+    function toggleAddForm(show) {
+      addForm.style.display = show ? 'block' : 'none';
     }
 
     backBtn.onclick = () => {
