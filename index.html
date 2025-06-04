@@ -113,111 +113,140 @@
   </main>
 
   <script>
-    const tg = window.Telegram.WebApp;
-    tg.ready();
+  const tg = window.Telegram.WebApp;
+  tg.ready();
 
-    const calendarEl = document.getElementById('calendar');
-    const selectedDateEl = document.getElementById('selectedDate');
-    const entryListEl = document.getElementById('entryList');
-    const statsEl = document.getElementById('stats');
+  const calendarEl = document.getElementById('calendar');
+  const selectedDateEl = document.getElementById('selectedDate');
+  const entryListEl = document.getElementById('entryList');
+  const statsEl = document.getElementById('stats');
+  const monthTitleEl = document.createElement('div');
+  const navButtonsEl = document.createElement('div');
 
-    let selectedDate = '';
-    const entriesKey = 'calendarEntries';
+  let selectedDate = '';
+  let currentMonthOffset = 0; // 0 - текущий месяц, -1 - предыдущий и т.д.
+  const entriesKey = 'calendarEntries';
 
-    function loadCalendar(monthOffset = 0) {
-      const now = new Date();
-      now.setMonth(now.getMonth() + monthOffset);
-      const year = now.getFullYear();
-      const month = now.getMonth();
-      const firstDay = new Date(year, month, 1);
-      const lastDay = new Date(year, month + 1, 0);
-      const startDay = firstDay.getDay() || 7;
+  // Вставляем заголовок и кнопки навигации
+  navButtonsEl.style.display = 'flex';
+  navButtonsEl.style.justifyContent = 'space-between';
+  navButtonsEl.style.marginBottom = '16px';
+  navButtonsEl.innerHTML = `
+    <button id="prevBtn" style="font-size: 24px;">⬅️</button>
+    <div id="monthTitle" style="font-size: 18px; font-weight: bold;"></div>
+    <button id="nextBtn" style="font-size: 24px;">➡️</button>
+  `;
+  calendarEl.parentNode.insertBefore(navButtonsEl, calendarEl);
+  const monthTitle = document.getElementById('monthTitle');
 
-      calendarEl.innerHTML = '';
+  document.getElementById('prevBtn').onclick = () => {
+    currentMonthOffset--;
+    loadCalendar(currentMonthOffset);
+  };
 
-      // Empty cells
-      for (let i = 1; i < startDay; i++) {
-        const div = document.createElement('div');
-        calendarEl.appendChild(div);
-      }
+  document.getElementById('nextBtn').onclick = () => {
+    currentMonthOffset++;
+    loadCalendar(currentMonthOffset);
+  };
 
-      for (let day = 1; day <= lastDay.getDate(); day++) {
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const div = document.createElement('div');
-        div.className = 'day';
-        if (dateStr === selectedDate) div.classList.add('active');
-        div.innerText = day;
-        div.onclick = () => {
-          selectedDate = dateStr;
-          selectedDateEl.value = dateStr;
-          renderEntries();
-          loadCalendar(monthOffset);
-        };
-        calendarEl.appendChild(div);
-      }
+  function loadCalendar(monthOffset = 0) {
+    const now = new Date();
+    now.setMonth(now.getMonth() + monthOffset);
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+                        "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+    monthTitle.textContent = `${monthNames[month]} ${year}`;
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDay = firstDay.getDay() || 7;
+
+    calendarEl.innerHTML = '';
+
+    // Empty cells
+    for (let i = 1; i < startDay; i++) {
+      const div = document.createElement('div');
+      calendarEl.appendChild(div);
     }
 
-    function saveEntry() {
-      if (!selectedDate) return alert('Выберите дату');
-      const time = document.getElementById('time').value;
-      const service = document.getElementById('service').value;
-      const income = parseFloat(document.getElementById('income').value) || 0;
-      const expenses = parseFloat(document.getElementById('expenses').value) || 0;
-
-      if (!time) return alert('Введите время');
-
-      const entries = JSON.parse(localStorage.getItem(entriesKey) || "[]");
-      entries.push({ date: selectedDate, time, service, income, expenses });
-      localStorage.setItem(entriesKey, JSON.stringify(entries));
-
-      document.getElementById('time').value = '';
-      document.getElementById('income').value = '';
-      document.getElementById('expenses').value = '';
-
-      renderEntries();
-      renderStats();
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const div = document.createElement('div');
+      div.className = 'day';
+      if (dateStr === selectedDate) div.classList.add('active');
+      div.innerText = day;
+      div.onclick = () => {
+        selectedDate = dateStr;
+        selectedDateEl.value = dateStr;
+        renderEntries();
+        loadCalendar(currentMonthOffset);
+      };
+      calendarEl.appendChild(div);
     }
+  }
 
-    function renderEntries() {
-      const entries = JSON.parse(localStorage.getItem(entriesKey) || "[]").filter(e => e.date === selectedDate);
-      entryListEl.innerHTML = '';
-      entries.forEach(entry => {
-        const div = document.createElement('div');
-        div.className = 'entry';
-        div.innerHTML = `
-          <strong>${entry.time}</strong><br>
-          ${entry.service}<br>
-          Доход: ${entry.income} ₽<br>
-          Расходы: ${entry.expenses} ₽
-        `;
-        entryListEl.appendChild(div);
-      });
-    }
+  function saveEntry() {
+    if (!selectedDate) return alert('Выберите дату');
+    const time = document.getElementById('time').value;
+    const service = document.getElementById('service').value;
+    const income = parseFloat(document.getElementById('income').value) || 0;
+    const expenses = parseFloat(document.getElementById('expenses').value) || 0;
 
-    function renderStats() {
-      const entries = JSON.parse(localStorage.getItem(entriesKey) || "[]");
+    if (!time) return alert('Введите время');
 
-      const today = new Date().toISOString().split('T')[0];
-      const thisMonth = today.slice(0, 7);
+    const entries = JSON.parse(localStorage.getItem(entriesKey) || "[]");
+    entries.push({ date: selectedDate, time, service, income, expenses });
+    localStorage.setItem(entriesKey, JSON.stringify(entries));
 
-      const totalToday = entries.filter(e => e.date === today)
-        .reduce((sum, e) => sum + e.income - e.expenses, 0);
+    document.getElementById('time').value = '';
+    document.getElementById('income').value = '';
+    document.getElementById('expenses').value = '';
 
-      const totalMonth = entries.filter(e => e.date.startsWith(thisMonth))
-        .reduce((sum, e) => sum + e.income - e.expenses, 0);
-
-      const totalAll = entries.reduce((sum, e) => sum + e.income - e.expenses, 0);
-
-      statsEl.innerHTML = `
-        <h4>Статистика</h4>
-        <p>Сегодня: ${totalToday.toFixed(2)} ₽</p>
-        <p>Этот месяц: ${totalMonth.toFixed(2)} ₽</p>
-        <p>Общий доход: ${totalAll.toFixed(2)} ₽</p>
-      `;
-    }
-
-    loadCalendar();
+    renderEntries();
     renderStats();
-  </script>
+  }
+
+  function renderEntries() {
+    const entries = JSON.parse(localStorage.getItem(entriesKey) || "[]").filter(e => e.date === selectedDate);
+    entryListEl.innerHTML = '';
+    entries.forEach(entry => {
+      const div = document.createElement('div');
+      div.className = 'entry';
+      div.innerHTML = `
+        <strong>${entry.time}</strong><br>
+        ${entry.service}<br>
+        Доход: ${entry.income} ₽<br>
+        Расходы: ${entry.expenses} ₽
+      `;
+      entryListEl.appendChild(div);
+    });
+  }
+
+  function renderStats() {
+    const entries = JSON.parse(localStorage.getItem(entriesKey) || "[]");
+
+    const today = new Date().toISOString().split('T')[0];
+    const thisMonth = today.slice(0, 7);
+
+    const totalToday = entries.filter(e => e.date === today)
+      .reduce((sum, e) => sum + (e.income - e.expenses), 0);
+
+    const totalMonth = entries.filter(e => e.date.startsWith(thisMonth))
+      .reduce((sum, e) => sum + (e.income - e.expenses), 0);
+
+    const totalAll = entries.reduce((sum, e) => sum + (e.income - e.expenses), 0);
+
+    statsEl.innerHTML = `
+      <h4>Статистика</h4>
+      <p>Сегодня: ${totalToday.toFixed(2)} ₽</p>
+      <p>Этот месяц: ${totalMonth.toFixed(2)} ₽</p>
+      <p>Общий доход: ${totalAll.toFixed(2)} ₽</p>
+    `;
+  }
+
+  loadCalendar(currentMonthOffset);
+  renderStats();
+</script>
 </body>
 </html>
