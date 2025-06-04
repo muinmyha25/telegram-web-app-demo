@@ -86,7 +86,7 @@
       color: #155724;
     }
 
-    /* Меньше стрелок */
+    /* Стрелки меньше */
     #backBtn, #nextBtn {
       font-size: 16px;
       padding: 5px 10px;
@@ -242,6 +242,7 @@
 
       calendarEl.innerHTML = '';
 
+      // Empty cells
       for (let i = 1; i < startDay; i++) {
         const div = document.createElement('div');
         calendarEl.appendChild(div);
@@ -266,7 +267,7 @@
           selectedDate = dateStr;
           selectedDateEl.value = dateStr;
           renderEntries();
-          loadCalendar(currentMonthOffset);
+          loadCalendar(monthOffset);
         };
         calendarEl.appendChild(div);
       }
@@ -376,7 +377,10 @@
 
       if (!user) return;
 
-      tg.sendData(JSON.stringify({ action: "sync", user_id: user.id }));
+      tg.sendData(JSON.stringify({
+        action: "sync",
+        user_id: user.id
+      }));
     }
 
     window.addEventListener("load", () => {
