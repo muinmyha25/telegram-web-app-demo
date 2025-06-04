@@ -300,36 +300,55 @@
 }
 
     function saveEntry() {
-      if (!selectedDate) return alert('Выберите дату');
-      const time = document.getElementById('time').value;
-      const service = document.getElementById('service').value;
-      const income = parseFloat(document.getElementById('income').value) || 0;
-      const expenses = parseFloat(document.getElementById('expenses').value) || 0;
+  if (!selectedDate) return alert('Выберите дату');
+  const time = document.getElementById('time').value;
+  const service = document.getElementById('service').value;
+  const income = parseFloat(document.getElementById('income').value) || 0;
+  const expenses = parseFloat(document.getElementById('expenses').value) || 0;
 
-      if (!time) return alert('Введите время');
+  if (!time) return alert('Введите время');
 
-      const key = `calendarEntries_${userId}`;
-      const entries = JSON.parse(localStorage.getItem(key) || "[]");
-      entries.push({ date: selectedDate, time, service, income, expenses });
-      localStorage.setItem(key, JSON.stringify(entries));
+  const key = `calendarEntries_${userId}`;
+  const entries = JSON.parse(localStorage.getItem(key) || "[]");
+  entries.push({ date: selectedDate, time, service, income, expenses });
+  localStorage.setItem(key, JSON.stringify(entries));
 
-      tg.sendData(JSON.stringify({
-        action: "new_entry",
-        user_id: userId,
-        date: selectedDate,
-        time,
-        service,
-        income,
-        expenses
-      }));
+  // Отправляем данные боту
+  tg.sendData(JSON.stringify({
+    action: "new_entry",
+    user_id: userId,
+    date: selectedDate,
+    time,
+    service,
+    income,
+    expenses
+  }));
 
-      document.getElementById('time').value = '';
-      document.getElementById('income').value = '';
-      document.getElementById('expenses').value = '';
+  // Показываем временный успех
+  const tempDiv = document.createElement('div');
+  tempDiv.style.position = 'fixed';
+  tempDiv.style.bottom = '20px';
+  tempDiv.style.left = '50%';
+  tempDiv.style.transform = 'translateX(-50%)';
+  tempDiv.style.backgroundColor = '#28a745';
+  tempDiv.style.color = 'white';
+  tempDiv.style.padding = '12px 24px';
+  tempDiv.style.borderRadius = '8px';
+  tempDiv.style.zIndex = '1000';
+  tempDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+  tempDiv.innerText = '✅ Запись сохранена!';
+  document.body.appendChild(tempDiv);
 
-      renderEntries();
-      renderStats();
+  // Через 1.5 секунды закрываем Web App
+  setTimeout(() => {
+    document.body.removeChild(tempDiv);
+    if (tg.WebApp.platform !== 'unknown') {
+      tg.close();  // Закрываем Web App
+    } else {
+      alert("Данные сохранены!");
     }
+  }, 1500);
+}
 
     function renderEntries() {
       const key = `calendarEntries_${userId}`;
