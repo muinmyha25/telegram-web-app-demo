@@ -38,9 +38,6 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       transition: all 0.2s ease;
     }
-    .day:hover {
-      transform: scale(1.05);
-    }
     .form-group {
       margin-bottom: 12px;
     }
@@ -131,12 +128,13 @@
     const backBtn = document.getElementById('backBtn');
     const nextBtn = document.getElementById('nextBtn');
 
-    let currentView = 'year'; // year | month | day
+    let currentView = 'year';
     let currentYear = new Date().getFullYear();
-    let currentMonthOffset = 0; // offset from current month
-    let selectedMonth = new Date().getMonth(); // 0-11
+    let currentMonthOffset = 0;
+    let selectedMonth = new Date().getMonth();
     let selectedDate = '';
-    const entriesKey = 'calendarEntries';
+    const user = tg.initDataUnsafe?.user;
+    const userId = user ? user.id : 'unknown';
 
     function updateNavVisibility() {
       backBtn.style.display = currentView === 'day' ? 'inline-block' : 'none';
@@ -198,7 +196,7 @@
       const lastDay = new Date(year, month + 1, 0);
       const startDay = firstDay.getDay() || 7;
 
-      const entries = JSON.parse(localStorage.getItem(entriesKey) || "[]");
+      const entries = JSON.parse(localStorage.getItem(`calendarEntries_${userId}`) || "[]");
 
       calendarEl.innerHTML = '';
 
@@ -242,9 +240,20 @@
 
       if (!time) return alert('Введите время');
 
-      const entries = JSON.parse(localStorage.getItem(entriesKey) || "[]");
+      const key = `calendarEntries_${userId}`;
+      const entries = JSON.parse(localStorage.getItem(key) || "[]");
       entries.push({ date: selectedDate, time, service, income, expenses });
-      localStorage.setItem(entriesKey, JSON.stringify(entries));
+      localStorage.setItem(key, JSON.stringify(entries));
+
+      tg.sendData(JSON.stringify({
+        action: "new_entry",
+        user_id: userId,
+        date: selectedDate,
+        time,
+        service,
+        income,
+        expenses
+      }));
 
       document.getElementById('time').value = '';
       document.getElementById('income').value = '';
@@ -255,7 +264,8 @@
     }
 
     function renderEntries() {
-      const entries = JSON.parse(localStorage.getItem(entriesKey) || "[]").filter(e => e.date === selectedDate);
+      const key = `calendarEntries_${userId}`;
+      const entries = JSON.parse(localStorage.getItem(key) || "[]").filter(e => e.date === selectedDate);
       entryListEl.innerHTML = '';
       entries.forEach(entry => {
         const div = document.createElement('div');
@@ -271,7 +281,8 @@
     }
 
     function renderStats() {
-      const entries = JSON.parse(localStorage.getItem(entriesKey) || "[]");
+      const key = `calendarEntries_${userId}`;
+      const entries = JSON.parse(localStorage.getItem(key) || "[]");
 
       const today = new Date().toISOString().split('T')[0];
       const thisMonth = today.slice(0, 7);
@@ -292,7 +303,6 @@
       `;
     }
 
-    // Инициализация
     backBtn.onclick = () => {
       if (currentView === 'year') {
         currentYear--;
@@ -318,6 +328,10 @@
         loadCalendar(currentMonthOffset);
       }
     };
+
+    if (user) {
+      localStorage.setItem('telegram_user_id', user.id);
+    }
 
     showYears();
     renderStats();
