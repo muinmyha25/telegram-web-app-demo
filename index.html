@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Telegram Web App</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script> 
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Привет из Telegram Web App!</h1>
+  <p id="user-data">Загрузка данных...</p>
+  <button onclick="sendData()">Отправить сообщение боту</button>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+
+    tg.ready();
+
+    // Получаем данные пользователя
+    const user = tg.initDataUnsafe?.user;
+    if (user) {
+      document.getElementById('user-data').innerText =
+        `Привет, ${user.first_name} (${user.id})`;
+    }
+
+    function sendData() {
+      tg.sendData("Пользователь нажал кнопку!");
+    }
+  </script>
+</body>
+</html>
