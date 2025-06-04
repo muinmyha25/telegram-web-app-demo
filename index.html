@@ -71,7 +71,7 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
-    /* Сетка месяцев */
+    /* Месяца */
     .month {
       width: calc(33.33%); /* 3 колонки */
       margin-bottom: 16px;
@@ -79,15 +79,27 @@
     .calendar {
       grid-template-columns: repeat(3, 1fr); /* 3 колонки */
     }
+
+    /* Месяц с записями */
+    .month.has-entries {
+      background-color: #d4edda !important;
+      color: #155724;
+    }
+
+    /* Меньше стрелок */
+    #backBtn, #nextBtn {
+      font-size: 16px;
+      padding: 5px 10px;
+    }
   </style>
 </head>
 <body>
   <header>Календарь услуг</header>
   <main>
     <div style="display:flex;justify-content:space-between;margin-bottom:16px;">
-      <button id="backBtn" style="font-size: 18px;">⬅️</button>
+      <button id="backBtn">⬅️</button>
       <div id="monthTitle" style="font-size: 18px; font-weight: bold;"></div>
-      <button id="nextBtn" style="font-size: 18px;">➡️</button>
+      <button id="nextBtn">➡️</button>
     </div>
 
     <div class="calendar" id="calendar"></div>
@@ -174,13 +186,29 @@
 
       calendarEl.innerHTML = '';
 
-      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const monthNames = ["Янв", "Фев", "Март", "Апр", "Май", "Июн",
+                          "Июль", "Авг", "Сен", "Окт", "Ноя", "Дек"];
+
+      const entries = JSON.parse(localStorage.getItem(`calendarEntries_${userId}`) || "[]");
+
+      const incomeByMonth = {};
+      entries.forEach(e => {
+        const [y, m] = e.date.split('-');
+        const key = `${y}-${m}`;
+        if (!incomeByMonth[key]) incomeByMonth[key] = { total: 0, count: 0 };
+        incomeByMonth[key].total += parseFloat(e.income || 0) - parseFloat(e.expenses || 0);
+        incomeByMonth[key].count++;
+      });
 
       for (let i = 0; i < 12; i++) {
+        const dateStr = `${year}-${String(i + 1).padStart(2, '0')}`;
+        const hasEntry = incomeByMonth[`${year}-${String(i + 1).padStart(2, '0')}`];
+        const incomeText = hasEntry ? `\n\n${hasEntry.total.toFixed(2)} ₽` : "";
+
         const div = document.createElement('div');
         div.className = 'month';
-        div.innerText = monthNames[i];
+        if (hasEntry) div.classList.add('has-entries');
+        div.innerText = monthNames[i] + incomeText;
         div.onclick = () => {
           selectedMonth = i;
           currentMonthOffset = (year - new Date().getFullYear()) * 12 + i - new Date().getMonth();
@@ -208,6 +236,14 @@
 
       const entries = JSON.parse(localStorage.getItem(`calendarEntries_${userId}`) || "[]");
 
+      const monthEntries = entries.filter(e => e.date.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`));
+      const totalIncome = monthEntries.reduce((sum, e) => sum + (e.income - e.expenses), 0);
+
+      statsEl.innerHTML = `
+        <h4>Статистика</h4>
+        <p>Доход за месяц: ${totalIncome.toFixed(2)} ₽</p>
+      `;
+
       calendarEl.innerHTML = '';
 
       // Empty cells
@@ -222,11 +258,10 @@
         div.className = 'day';
         if (dateStr === selectedDate) div.classList.add('active');
 
-        // Подсветка записей
         const hasEntry = entries.some(e => e.date === dateStr);
         if (hasEntry) {
           const isPast = new Date(dateStr) < new Date(new Date().setHours(0,0,0,0));
-          div.style.backgroundColor = isPast ? '#d4edda' : '#f8d7da'; // green pastel / pink pastel
+          div.style.backgroundColor = isPast ? '#d4edda' : '#f8d7da';
           div.style.color = '#333';
         }
 
