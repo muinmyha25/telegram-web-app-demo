@@ -37,25 +37,6 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       transition: all 0.2s ease;
     }
-    .day {
-  background: white;
-  border-radius: 8px;
-  padding: 10px;
-  text-align: center;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  transition: all 0.2s ease;
-}
-
-/* Прошедшие даты */
-.day[style*="d4edda"] {
-  color: #155724;
-}
-
-/* Будущие даты */
-.day[style*="f8d7da"] {
-  color: #721c24;
-}
     .form-group {
       margin-bottom: 12px;
     }
@@ -151,7 +132,6 @@
     <button onclick="saveEntry()">Сохранить</button>
 
     <div class="stats" id="stats"></div>
-
     <div class="entry-list" id="entryList"></div>
   </main>
 
@@ -205,29 +185,26 @@
 
       calendarEl.innerHTML = '';
 
-      const monthNames = ["Янв", "Фев", "Март", "Апр", "Май", "Июн",
-                          "Июль", "Авг", "Сен", "Окт", "Ноя", "Дек"];
+      const monthNames = ["Янв", "Фев", "Мар", "Апр", "Май", "Июн",
+                          "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"];
 
       const entries = JSON.parse(localStorage.getItem(`calendarEntries_${userId}`) || "[]");
 
       const incomeByMonth = {};
       entries.forEach(e => {
         const [y, m] = e.date.split('-');
-        const key = `${y}-${m}`;
-        if (!incomeByMonth[key]) incomeByMonth[key] = { total: 0, count: 0 };
-        incomeByMonth[key].total += parseFloat(e.income || 0) - parseFloat(e.expenses || 0);
-        incomeByMonth[key].count++;
+        if (!incomeByMonth[y]) incomeByMonth[y] = {};
+        incomeByMonth[y][m] = true;
       });
 
       for (let i = 0; i < 12; i++) {
         const dateStr = `${year}-${String(i + 1).padStart(2, '0')}`;
-        const hasEntry = incomeByMonth[`${year}-${String(i + 1).padStart(2, '0')}`];
-        const incomeText = hasEntry ? `\n\n${hasEntry.total.toFixed(2)} ₽` : "";
+        const hasEntry = incomeByMonth[year]?.[String(i + 1).padStart(2, '0')];
 
         const div = document.createElement('div');
         div.className = 'month';
         if (hasEntry) div.classList.add('has-entries');
-        div.innerText = monthNames[i] + incomeText;
+        div.innerText = monthNames[i];
         div.onclick = () => {
           selectedMonth = i;
           currentMonthOffset = (year - new Date().getFullYear()) * 12 + i - new Date().getMonth();
@@ -238,117 +215,94 @@
     }
 
     function loadCalendar(monthOffset = 0) {
-  currentView = 'day';
-  updateNavVisibility();
+      currentView = 'day';
+      updateNavVisibility();
 
-  const now = new Date();
-  now.setMonth(now.getMonth() + monthOffset);
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
-                      "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-  monthTitle.textContent = `${monthNames[month]} ${year}`;
+      const now = new Date();
+      now.setMonth(now.getMonth() + monthOffset);
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+                          "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+      monthTitle.textContent = `${monthNames[month]} ${year}`;
 
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const startDay = firstDay.getDay() || 7;
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const startDay = firstDay.getDay() || 7;
 
-  const entries = JSON.parse(localStorage.getItem(`calendarEntries_${userId}`) || "[]");
+      const entries = JSON.parse(localStorage.getItem(`calendarEntries_${userId}`) || "[]");
 
-  calendarEl.innerHTML = '';
+      const monthEntries = entries.filter(e => e.date.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`);
+      const totalIncome = monthEntries.reduce((sum, e) => sum + (e.income - e.expenses), 0);
 
-  // Empty cells
-  for (let i = 1; i < startDay; i++) {
-    const div = document.createElement('div');
-    calendarEl.appendChild(div);
-  }
+      statsEl.innerHTML = `
+        <h4>Статистика</h4>
+        <p>Доход за месяц: ${totalIncome.toFixed(2)} ₽</p>
+      `;
 
-  for (let day = 1; day <= lastDay.getDate(); day++) {
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const div = document.createElement('div');
-    div.className = 'day';
-    if (dateStr === selectedDate) div.classList.add('active');
+      calendarEl.innerHTML = '';
 
-    // Подсветка записей
-    const hasEntry = entries.some(e => e.date === dateStr);
+      for (let i = 1; i < startDay; i++) {
+        const div = document.createElement('div');
+        calendarEl.appendChild(div);
+      }
 
-    // Текущая дата
-    const today = new Date();
-    const currentDateStr = today.toISOString().split('T')[0];
-    const isPast = dateStr < currentDateStr;
+      for (let day = 1; day <= lastDay.getDate(); day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const div = document.createElement('div');
+        div.className = 'day';
+        if (dateStr === selectedDate) div.classList.add('active');
 
-    // Подсветка дат с записями
-    if (hasEntry) {
-      div.style.color = '#333';
+        const hasEntry = entries.some(e => e.date === dateStr);
+        const isPast = new Date(dateStr) < new Date(new Date().setHours(0,0,0,0));
 
-      if (isPast) {
-        div.style.backgroundColor = '#d4edda'; // 🟢 Зелёный пастельный
-      } else {
-        div.style.backgroundColor = '#f8d7da'; // 🟣 Розовый пастельный
+        if (hasEntry) {
+          div.style.backgroundColor = isPast ? '#d4edda' : '#f8d7da';
+          div.style.color = '#333';
+        }
+
+        div.innerText = day;
+        div.onclick = () => {
+          selectedDate = dateStr;
+          selectedDateEl.value = dateStr;
+          renderEntries();
+          loadCalendar(currentMonthOffset);
+        };
+        calendarEl.appendChild(div);
       }
     }
 
-    div.innerText = day;
-    div.onclick = () => {
-      selectedDate = dateStr;
-      selectedDateEl.value = dateStr;
-      renderEntries();
-      loadCalendar(monthOffset);
-    };
-    calendarEl.appendChild(div);
-  }
-}
-
     function saveEntry() {
-  if (!selectedDate) return alert('Выберите дату');
-  const time = document.getElementById('time').value;
-  const service = document.getElementById('service').value;
-  const income = parseFloat(document.getElementById('income').value) || 0;
-  const expenses = parseFloat(document.getElementById('expenses').value) || 0;
+      if (!selectedDate) return alert('Выберите дату');
+      const time = document.getElementById('time').value;
+      const service = document.getElementById('service').value;
+      const income = parseFloat(document.getElementById('income').value) || 0;
+      const expenses = parseFloat(document.getElementById('expenses').value) || 0;
 
-  if (!time) return alert('Введите время');
+      if (!time) return alert('Введите время');
 
-  const key = `calendarEntries_${userId}`;
-  const entries = JSON.parse(localStorage.getItem(key) || "[]");
-  entries.push({ date: selectedDate, time, service, income, expenses });
-  localStorage.setItem(key, JSON.stringify(entries));
+      const key = `calendarEntries_${userId}`;
+      const entries = JSON.parse(localStorage.getItem(key) || "[]");
+      entries.push({ date: selectedDate, time, service, income, expenses });
+      localStorage.setItem(key, JSON.stringify(entries));
 
-  // Отправляем данные боту
-  tg.sendData(JSON.stringify({
-    action: "new_entry",
-    user_id: userId,
-    date: selectedDate,
-    time,
-    service,
-    income,
-    expenses
-  }));
+      tg.sendData(JSON.stringify({
+        action: "new_entry",
+        user_id: userId,
+        date: selectedDate,
+        time,
+        service,
+        income,
+        expenses
+      }));
 
-  // Показываем временный успех
-  const tempDiv = document.createElement('div');
-  tempDiv.style.position = 'fixed';
-  tempDiv.style.bottom = '20px';
-  tempDiv.style.left = '50%';
-  tempDiv.style.transform = 'translateX(-50%)';
-  tempDiv.style.backgroundColor = '#28a745';
-  tempDiv.style.color = 'white';
-  tempDiv.style.padding = '12px 24px';
-  tempDiv.style.borderRadius = '8px';
-  tempDiv.style.zIndex = '1000';
-  tempDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
-  tempDiv.innerText = '✅ Запись сохранена!';
-  document.body.appendChild(tempDiv);
+      document.getElementById('time').value = '';
+      document.getElementById('income').value = '';
+      document.getElementById('expenses').value = '';
 
-  // Через 1.5 секунды закрываем Web App
-  setTimeout(() => {
-    document.body.removeChild(tempDiv);
-    if (tg.WebApp.platform !== 'unknown') {
-      tg.close();  // Закрываем Web App
-    } else {
-      alert("Данные сохранены!");
+      renderEntries();
+      renderStats();
     }
-  }, 1500);
-}
 
     function renderEntries() {
       const key = `calendarEntries_${userId}`;
@@ -416,12 +370,20 @@
       }
     };
 
-    if (user) {
-      localStorage.setItem('telegram_user_id', user.id);
+    function syncData() {
+      const tg = window.Telegram.WebApp;
+      const user = tg.initDataUnsafe?.user;
+
+      if (!user) return;
+
+      tg.sendData(JSON.stringify({ action: "sync", user_id: user.id }));
     }
 
-    showYears();
-    renderStats();
+    window.addEventListener("load", () => {
+      showYears();
+      renderStats();
+      syncData();
+    });
   </script>
 </body>
 </html>
