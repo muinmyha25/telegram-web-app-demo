@@ -102,6 +102,7 @@
 <body>
   <header>Календарь услуг</header>
   <main>
+    <button onclick="clearLocalStorage()">🗑 Очистить локальные данные</button> 
     <div style="display:flex;justify-content:space-between;margin-bottom:16px;">
       <button id="backBtn">⬅️</button>
       <div id="monthTitle" style="font-size: 18px; font-weight: bold;"></div>
@@ -190,7 +191,14 @@
 
       renderStatsForYear(currentYear);
     }
-
+    
+function clearLocalStorage() {
+  if (confirm("Вы уверены, что хотите удалить все локальные записи?")) {
+    localStorage.removeItem(`calendarEntries_${userId}`);
+    alert("Локальные записи удалены!");
+    location.reload();
+  }
+}
     function showMonthsGrid(year) {
       currentView = 'months-grid';
       updateNavVisibility();
