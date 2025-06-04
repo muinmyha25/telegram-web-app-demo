@@ -37,6 +37,25 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       transition: all 0.2s ease;
     }
+    .day {
+  background: white;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+}
+
+/* Прошедшие даты */
+.day[style*="d4edda"] {
+  color: #155724;
+}
+
+/* Будущие даты */
+.day[style*="f8d7da"] {
+  color: #721c24;
+}
     .form-group {
       margin-bottom: 12px;
     }
@@ -219,62 +238,66 @@
     }
 
     function loadCalendar(monthOffset = 0) {
-      currentView = 'day';
-      updateNavVisibility();
+  currentView = 'day';
+  updateNavVisibility();
 
-      const now = new Date();
-      now.setMonth(now.getMonth() + monthOffset);
-      const year = now.getFullYear();
-      const month = now.getMonth();
-      const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
-                          "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-      monthTitle.textContent = `${monthNames[month]} ${year}`;
+  const now = new Date();
+  now.setMonth(now.getMonth() + monthOffset);
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+                      "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+  monthTitle.textContent = `${monthNames[month]} ${year}`;
 
-      const firstDay = new Date(year, month, 1);
-      const lastDay = new Date(year, month + 1, 0);
-      const startDay = firstDay.getDay() || 7;
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startDay = firstDay.getDay() || 7;
 
-      const entries = JSON.parse(localStorage.getItem(`calendarEntries_${userId}`) || "[]");
+  const entries = JSON.parse(localStorage.getItem(`calendarEntries_${userId}`) || "[]");
 
-      const monthEntries = entries.filter(e => e.date.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`));
-      const totalIncome = monthEntries.reduce((sum, e) => sum + (e.income - e.expenses), 0);
+  calendarEl.innerHTML = '';
 
-      statsEl.innerHTML = `
-        <h4>Статистика</h4>
-        <p>Доход за месяц: ${totalIncome.toFixed(2)} ₽</p>
-      `;
+  // Empty cells
+  for (let i = 1; i < startDay; i++) {
+    const div = document.createElement('div');
+    calendarEl.appendChild(div);
+  }
 
-      calendarEl.innerHTML = '';
+  for (let day = 1; day <= lastDay.getDate(); day++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const div = document.createElement('div');
+    div.className = 'day';
+    if (dateStr === selectedDate) div.classList.add('active');
 
-      // Empty cells
-      for (let i = 1; i < startDay; i++) {
-        const div = document.createElement('div');
-        calendarEl.appendChild(div);
-      }
+    // Подсветка записей
+    const hasEntry = entries.some(e => e.date === dateStr);
 
-      for (let day = 1; day <= lastDay.getDate(); day++) {
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const div = document.createElement('div');
-        div.className = 'day';
-        if (dateStr === selectedDate) div.classList.add('active');
+    // Текущая дата
+    const today = new Date();
+    const currentDateStr = today.toISOString().split('T')[0];
+    const isPast = dateStr < currentDateStr;
 
-        const hasEntry = entries.some(e => e.date === dateStr);
-        if (hasEntry) {
-          const isPast = new Date(dateStr) < new Date(new Date().setHours(0,0,0,0));
-          div.style.backgroundColor = isPast ? '#d4edda' : '#f8d7da';
-          div.style.color = '#333';
-        }
+    // Подсветка дат с записями
+    if (hasEntry) {
+      div.style.color = '#333';
 
-        div.innerText = day;
-        div.onclick = () => {
-          selectedDate = dateStr;
-          selectedDateEl.value = dateStr;
-          renderEntries();
-          loadCalendar(currentMonthOffset);
-        };
-        calendarEl.appendChild(div);
+      if (isPast) {
+        div.style.backgroundColor = '#d4edda'; // 🟢 Зелёный пастельный
+      } else {
+        div.style.backgroundColor = '#f8d7da'; // 🟣 Розовый пастельный
       }
     }
+
+    div.innerText = day;
+    div.onclick = () => {
+      selectedDate = dateStr;
+      selectedDateEl.value = dateStr;
+      renderEntries();
+      loadCalendar(monthOffset);
+    };
+    calendarEl.appendChild(div);
+  }
+}
 
     function saveEntry() {
       if (!selectedDate) return alert('Выберите дату');
