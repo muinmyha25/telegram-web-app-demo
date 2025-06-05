@@ -1,15 +1,33 @@
-// Укажи URL своего сервера
-const API_URL = "http://127.0.0.1:5000";  // Замени на свой URL
+
+const API_URL = "http://127.0.0.1:5000";  // заменить на свой URL
 
 document.addEventListener("DOMContentLoaded", async () => {
   const yearPicker = document.getElementById("yearPicker");
   const totalEarnings = document.getElementById("totalEarnings");
   const totalExpenses = document.getElementById("totalExpenses");
 
+  let telegramId = null;
+
+  // Проверяем, доступен ли Telegram WebApp API
+  if (window.Telegram && window.Telegram.WebApp) {
+    const webApp = window.Telegram.WebApp;
+    webApp.ready();
+
+    const user = webApp.initDataUnsafe?.user;
+    if (user && user.id) {
+      telegramId = user.id;
+      console.log("Telegram ID:", telegramId);
+    } else {
+      alert("Ошибка: не удалось получить Telegram ID");
+    }
+  } else {
+    alert("Веб-приложение запущено не в Telegram");
+  }
+
   // Загрузка данных
   async function loadStats() {
     try {
-      const response = await fetch(`${API_URL}/api/stats`);
+      const response = await fetch(`${API_URL}/api/stats?telegram_id=${telegramId}`);
       const data = await response.json();
       totalEarnings.textContent = `${data.totalEarnings} ₽`;
       totalExpenses.textContent = `${data.totalExpenses} ₽`;
@@ -19,17 +37,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       totalExpenses.textContent = "Ошибка";
     }
   }
-
-  // Генерация списка годов
-  const currentYear = new Date().getFullYear();
-  for (let i = currentYear - 5; i <= currentYear + 5; i++) {
-    const option = document.createElement("option");
-    option.value = i;
-    option.textContent = i;
-    yearPicker.appendChild(option);
-  }
-
-  yearPicker.value = currentYear;
 
   // Отправка формы
   document.getElementById("recordForm").addEventListener("submit", async function(e) {
@@ -43,7 +50,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const response = await fetch(`${API_URL}/api/add`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ income, expense, note })
+        body: JSON.stringify({ income, expense, note, telegram_id: telegramId })
       });
 
       if (response.ok) {
@@ -58,6 +65,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       alert("Не удалось отправить данные");
     }
   });
+
+  // Генерация списка годов
+  const currentYear = new Date().getFullYear();
+  for (let i = currentYear - 5; i <= currentYear + 5; i++) {
+    const option = document.createElement("option");
+    option.value = i;
+    option.textContent = i;
+    yearPicker.appendChild(option);
+  }
+
+  yearPicker.value = currentYear;
 
   // Загружаем статистику при запуске
   await loadStats();
