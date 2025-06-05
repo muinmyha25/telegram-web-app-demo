@@ -1,1 +1,90 @@
-<script src="{{ url_for(filename='main.js') }}"></script>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Календарь Мастера</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f2f2f7;
+      color: #1c1c1e;
+    }
+
+    header {
+      background: white;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .container {
+      padding: 20px;
+    }
+
+    .year-picker {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
+    }
+
+    select {
+      font-size: 16px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      width: 150px;
+      appearance: none;
+      background-color: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .stats {
+      background: white;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 14px;
+      color: #999;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Календарь Мастера</h1>
+  </header>
+
+  <div class="container">
+    <div class="year-picker">
+      <select id="yearPicker"></select>
+    </div>
+
+    <div class="stats">
+      <p><strong>Доход за всё время:</strong> <span id="totalEarnings">Загрузка...</span></p>
+      <p><strong>Расход за всё время:</strong> <span id="totalExpenses">Загрузка...</span></p>
+    </div>
+
+    <div class="footer">
+      &copy; 2025 Календарь для мастера
+    </div>
+  </div>
+
+  <!-- Подключение JS -->
+  <script src="main.js"></script>
+
+</body>
+</html>
