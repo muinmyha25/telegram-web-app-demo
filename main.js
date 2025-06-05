@@ -1,6 +1,6 @@
 
 // Укажи URL своего сервера (ngrok, VPS, Render и т.д.)
-const API_URL = "https://abcd1234.ngrok.io";  // замени на свой ngrok-URL
+const API_URL = "http://192.168.0.146:5000";  // замени на свой ngrok-URL
 
 document.addEventListener("DOMContentLoaded", () => {
     let telegramId = null;
