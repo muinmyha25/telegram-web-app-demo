@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const totalExpenses = document.getElementById("totalExpenses");
 
   // Получаем API URL из localStorage или передайте его через window.Telegram.WebApp.initData
-  const API_URL = "https://muinmyha25.github.io/telegram-web-app-demo"; // или получите из env или WebApp
+  const API_URL = "http://127.0.0.1:5000"; // или получите из env или WebApp
 
   try {
     const response = await fetch(`${API_URL}/api/stats`);
