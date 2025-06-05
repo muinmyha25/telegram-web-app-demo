@@ -54,6 +54,44 @@
       margin-bottom: 20px;
     }
 
+    form {
+      background: white;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 10px;
+      background-color: #007aff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #005edc;
+    }
+
     .footer {
       text-align: center;
       font-size: 14px;
@@ -77,6 +115,19 @@
       <p><strong>Доход за всё время:</strong> <span id="totalEarnings">Загрузка...</span></p>
       <p><strong>Расход за всё время:</strong> <span id="totalExpenses">Загрузка...</span></p>
     </div>
+
+    <form id="recordForm">
+      <label>Доход (₽):
+        <input type="number" name="income" placeholder="Например: 3000" />
+      </label>
+      <label>Расход (₽):
+        <input type="number" name="expense" placeholder="Например: 500" />
+      </label>
+      <label>Заметка:
+        <input type="text" name="note" placeholder="Имя клиента или услуга" />
+      </label>
+      <button type="submit">Добавить запись</button>
+    </form>
 
     <div class="footer">
       &copy; 2025 Календарь для мастера
