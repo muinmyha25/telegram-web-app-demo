@@ -3,15 +3,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   const totalEarnings = document.getElementById("totalEarnings");
   const totalExpenses = document.getElementById("totalExpenses");
 
-  // Пример запроса к серверу
+  // Получаем API URL из localStorage или передайте его через window.Telegram.WebApp.initData
+  const API_URL = "https://muinmyha25.github.io/telegram-web-app-demo"; // или получите из env или WebApp
+
   try {
-    const response = await fetch("/api/stats");
+    const response = await fetch(`${API_URL}/api/stats`);
     const data = await response.json();
     totalEarnings.textContent = `${data.totalEarnings} ₽`;
     totalExpenses.textContent = `${data.totalExpenses} ₽`;
   } catch (err) {
-    totalEarnings.textContent = "Ошибка загрузки";
-    totalExpenses.textContent = "Ошибка загрузки";
+    console.error("Ошибка загрузки статистики:", err);
+    totalEarnings.textContent = "Ошибка";
+    totalExpenses.textContent = "Ошибка";
   }
 
   // Генерация списка годов
