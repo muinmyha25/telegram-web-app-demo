@@ -1,5 +1,5 @@
 
-const API_URL = "http://127.0.0.1:5000";  // заменить на свой URL
+const API_URL = "https://muinmyha25.github.io/telegram-web-app-demo";  // заменить на свой URL
 
 document.addEventListener("DOMContentLoaded", async () => {
   const yearPicker = document.getElementById("yearPicker");
