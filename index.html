@@ -86,13 +86,7 @@
       color: #155724;
     }
 
-    /* День с записями */
-    .day.has-entries {
-      background-color: #d4edda !important;
-      color: #155724;
-    }
-
-    /* Меньше стрелок */
+    /* Стрелки меньше */
     #backBtn, #nextBtn {
       font-size: 16px;
       padding: 5px 10px;
@@ -102,7 +96,6 @@
 <body>
   <header>Календарь услуг</header>
   <main>
-    <button onclick="clearLocalStorage()">🗑 Очистить локальные данные</button> 
     <div style="display:flex;justify-content:space-between;margin-bottom:16px;">
       <button id="backBtn">⬅️</button>
       <div id="monthTitle" style="font-size: 18px; font-weight: bold;"></div>
@@ -111,7 +104,7 @@
 
     <div class="calendar" id="calendar"></div>
 
-    <!-- Форма добавления записи -->
+    <!-- Форма добавления -->
     <div id="addForm" style="display:none;">
       <h3>Добавить запись</h3>
       <div class="form-group">
@@ -141,8 +134,8 @@
       <button onclick="saveEntry()">Сохранить</button>
     </div>
 
+    <!-- Статистика -->
     <div class="stats" id="stats"></div>
-    <div class="entry-list" id="entryList"></div>
   </main>
 
   <script>
@@ -150,8 +143,6 @@
     tg.ready();
 
     const calendarEl = document.getElementById('calendar');
-    const selectedDateEl = document.getElementById('selectedDate');
-    const entryListEl = document.getElementById('entryList');
     const statsEl = document.getElementById('stats');
     const monthTitle = document.getElementById('monthTitle');
     const backBtn = document.getElementById('backBtn');
@@ -160,20 +151,33 @@
 
     let currentView = 'year'; // year | months-grid | day
     let currentYear = new Date().getFullYear();
-    let currentMonthOffset = 0; // offset from current month
+    let currentMonthOffset = 0;
     let selectedMonth = new Date().getMonth(); // 0-11
     let selectedDate = '';
     const user = tg.initDataUnsafe?.user;
     const userId = user ? user.id : 'unknown';
 
-    function updateNavVisibility() {
-      backBtn.style.display = currentView === 'day' ? 'inline-block' : 'none';
-      nextBtn.style.display = currentView === 'day' ? 'inline-block' : 'none';
+    let serverData = [];
+
+    // Получаем данные с бота
+    function fetchServerData(callback) {
+      tg.sendData(JSON.stringify({ action: "sync", user_id: userId }));
+      callback && setTimeout(callback, 500); // имитация асинхронного ответа
     }
 
+    // Обновляем статистику по пользователю
+    function updateGlobalStats() {
+      const totalIncome = serverData.reduce((sum, e) => sum + (e.income - e.expenses), 0);
+
+      statsEl.innerHTML = `
+        <h4>Статистика за всё время</h4>
+        <p>Общий доход: ${totalIncome.toFixed(2)} ₽</p>
+      `;
+    }
+
+    // Показываем годы
     function showYears() {
       currentView = 'year';
-      updateNavVisibility();
       monthTitle.textContent = currentYear;
 
       calendarEl.innerHTML = '';
@@ -189,38 +193,28 @@
         calendarEl.appendChild(div);
       }
 
-      renderStatsForYear(currentYear);
+      updateGlobalStats();
     }
-    
-function clearLocalStorage() {
-  if (confirm("Вы уверены, что хотите удалить все локальные записи?")) {
-    localStorage.removeItem(`calendarEntries_${userId}`);
-    alert("Локальные записи удалены!");
-    location.reload();
-  }
-}
+
+    // Показываем месяцы
     function showMonthsGrid(year) {
       currentView = 'months-grid';
-      updateNavVisibility();
       monthTitle.textContent = year;
 
       calendarEl.innerHTML = '';
 
-      const monthNames = ["Янв", "Фев", "Мар", "Апр", "Май", "Июнь",
-                          "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-
-      const entries = JSON.parse(localStorage.getItem(`calendarEntries_${userId}`) || "[]");
+      const monthNames = ["Янв", "Фев", "Мар", "Апр", "Май", "Июн",
+                          "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"];
 
       const incomeByMonth = {};
-      entries.forEach(e => {
-        const [y, m] = e.date.split('-');
-        if (!incomeByMonth[y]) incomeByMonth[y] = {};
-        incomeByMonth[y][m] = true;
+      serverData.filter(e => e.date.startsWith(year)).forEach(e => {
+        const m = e.date.split('-')[1];
+        if (!incomeByMonth[m]) incomeByMonth[m] = true;
       });
 
       for (let i = 0; i < 12; i++) {
         const dateStr = `${year}-${String(i + 1).padStart(2, '0')}`;
-        const hasEntry = incomeByMonth[year]?.[String(i + 1).padStart(2, '0')];
+        const hasEntry = incomeByMonth[String(i + 1).padStart(2, '0')];
 
         const div = document.createElement('div');
         div.className = 'month';
@@ -234,13 +228,18 @@ function clearLocalStorage() {
         calendarEl.appendChild(div);
       }
 
-      renderStatsForYear(year);
+      // Статистика за год
+      const yearEntries = serverData.filter(e => e.date.startsWith(year));
+      const totalIncome = yearEntries.reduce((sum, e) => sum + (e.income - e.expenses), 0);
+      statsEl.innerHTML = `
+        <h4>Статистика за ${year}</h4>
+        <p>Доход за год: ${totalIncome.toFixed(2)} ₽</p>
+      `;
     }
 
+    // Календарь с днями
     function loadCalendar(monthOffset = 0) {
       currentView = 'day';
-      updateNavVisibility();
-
       const now = new Date();
       now.setMonth(now.getMonth() + monthOffset);
       const year = now.getFullYear();
@@ -253,19 +252,16 @@ function clearLocalStorage() {
       const lastDay = new Date(year, month + 1, 0);
       const startDay = firstDay.getDay() || 7;
 
-      const entries = JSON.parse(localStorage.getItem(`calendarEntries_${userId}`) || "[]");
-
-      const monthEntries = entries.filter(e => e.date.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`));
-      const totalIncome = monthEntries.reduce((sum, e) => sum + (e.income - e.expenses), 0);
+      const entries = serverData.filter(e => e.date.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`);
+      const totalIncome = entries.reduce((sum, e) => sum + (e.income - e.expenses), 0);
 
       statsEl.innerHTML = `
-        <h4>Статистика</h4>
+        <h4>Статистика за месяц</h4>
         <p>Доход за месяц: ${totalIncome.toFixed(2)} ₽</p>
       `;
 
       calendarEl.innerHTML = '';
 
-      // Empty cells
       for (let i = 1; i < startDay; i++) {
         const div = document.createElement('div');
         calendarEl.appendChild(div);
@@ -275,9 +271,9 @@ function clearLocalStorage() {
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const div = document.createElement('div');
         div.className = 'day';
-        if (dateStr === selectedDate) div.classList.add('active');
+        div.innerText = day;
 
-        const hasEntry = entries.some(e => e.date === dateStr);
+        const hasEntry = serverData.some(e => e.date === dateStr);
         const isPast = new Date(dateStr) < new Date(new Date().setHours(0,0,0,0));
 
         if (hasEntry) {
@@ -285,164 +281,91 @@ function clearLocalStorage() {
           div.style.color = '#333';
         }
 
-        div.innerText = day;
         div.onclick = () => {
           selectedDate = dateStr;
           selectedDateEl.value = dateStr;
-          renderEntries();
           toggleAddForm(true);
         };
+
         calendarEl.appendChild(div);
       }
-
-      toggleAddForm(false);
     }
 
     function saveEntry() {
-  if (!selectedDate) return alert('Выберите дату');
-  const time = document.getElementById('time').value;
-  const service = document.getElementById('service').value;
-  const income = parseFloat(document.getElementById('income').value) || 0;
-  const expenses = parseFloat(document.getElementById('expenses').value) || 0;
+      if (!selectedDate) return alert('Выберите дату');
+      const time = document.getElementById('time').value;
+      const service = document.getElementById('service').value;
+      const income = parseFloat(document.getElementById('income').value) || 0;
+      const expenses = parseFloat(document.getElementById('expenses').value) || 0;
 
-  if (!time) return alert('Введите время');
+      if (!time) return alert('Введите время');
 
-  const key = `calendarEntries_${userId}`;
-  const entries = JSON.parse(localStorage.getItem(key) || "[]");
-  entries.push({ date: selectedDate, time, service, income, expenses });
-  localStorage.setItem(key, JSON.stringify(entries));
+      // Отправляем данные боту
+      const entry = {
+        action: "new_entry",
+        user_id: userId,
+        date: selectedDate,
+        time,
+        service,
+        income,
+        expenses
+      };
 
-  // Отправляем данные боту
-  tg.sendData(JSON.stringify({
-    action: "new_entry",
-    user_id: userId,
-    date: selectedDate,
-    time,
-    service,
-    income,
-    expenses
-  }));
+      tg.sendData(JSON.stringify(entry));
 
-  // Показываем уведомление и закрываем Web App
-  const tempDiv = document.createElement('div');
-  tempDiv.style.position = 'fixed';
-  tempDiv.style.bottom = '20px';
-  tempDiv.style.left = '50%';
-  tempDiv.style.transform = 'translateX(-50%)';
-  tempDiv.style.backgroundColor = '#28a745';
-  tempDiv.style.color = 'white';
-  tempDiv.style.padding = '12px 24px';
-  tempDiv.style.borderRadius = '8px';
-  tempDiv.style.zIndex = '1000';
-  tempDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
-  tempDiv.innerText = '✅ Запись сохранена!';
-  document.body.appendChild(tempDiv);
+      // Локальное обновление
+      serverData.push(entry);
+      renderEntries();
+      loadCalendar(currentMonthOffset);
+      toggleAddForm(false);
 
-  setTimeout(() => {
-    document.body.removeChild(tempDiv);
-    tg.WebApp.close();  // Закрытие Web App
-  }, 1500);
-}
+      // Уведомление о сохранении
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'fixed';
+      tempDiv.style.bottom = '20px';
+      tempDiv.style.left = '50%';
+      tempDiv.style.transform = 'translateX(-50%)';
+      tempDiv.style.backgroundColor = '#28a745';
+      tempDiv.style.color = 'white';
+      tempDiv.style.padding = '12px 24px';
+      tempDiv.style.borderRadius = '8px';
+      tempDiv.style.zIndex = '1000';
+      tempDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+      tempDiv.innerText = '✅ Запись сохранена!';
+      document.body.appendChild(tempDiv);
 
-    function renderEntries() {
-      const key = `calendarEntries_${userId}`;
-      const entries = JSON.parse(localStorage.getItem(key) || "[]").filter(e => e.date === selectedDate);
-      entryListEl.innerHTML = '';
-      entries.forEach(entry => {
-        const div = document.createElement('div');
-        div.className = 'entry';
-        div.innerHTML = `
-          <strong>${entry.time}</strong><br>
-          ${entry.service}<br>
-          Доход: ${entry.income} ₽<br>
-          Расходы: ${entry.expenses} ₽
-        `;
-        entryListEl.appendChild(div);
-      });
-    }
-
-    function renderStats() {
-      const key = `calendarEntries_${userId}`;
-      const entries = JSON.parse(localStorage.getItem(key) || "[]");
-
-      const today = new Date().toISOString().split('T')[0];
-      const thisMonth = today.slice(0, 7);
-
-      const totalToday = entries.filter(e => e.date === today)
-        .reduce((sum, e) => sum + (e.income - e.expenses), 0);
-
-      const totalMonth = entries.filter(e => e.date.startsWith(thisMonth))
-        .reduce((sum, e) => sum + (e.income - e.expenses), 0);
-
-      const totalAll = entries.reduce((sum, e) => sum + (e.income - e.expenses), 0);
-
-      statsEl.innerHTML = `
-        <h4>Статистика</h4>
-        <p>Сегодня: ${totalToday.toFixed(2)} ₽</p>
-        <p>Этот месяц: ${totalMonth.toFixed(2)} ₽</p>
-        <p>Общий доход: ${totalAll.toFixed(2)} ₽</p>
-      `;
-    }
-
-    function renderStatsForYear(year) {
-      const key = `calendarEntries_${userId}`;
-      const entries = JSON.parse(localStorage.getItem(key) || "[]");
-
-      const yearEntries = entries.filter(e => e.date.startsWith(year));
-      const totalIncome = yearEntries.reduce((sum, e) => sum + (e.income - e.expenses), 0);
-
-      statsEl.innerHTML = `
-        <h4>Статистика за ${year}</h4>
-        <p>Доход за год: ${totalIncome.toFixed(2)} ₽</p>
-      `;
+      setTimeout(() => {
+        document.body.removeChild(tempDiv);
+        location.href = 'tg://close';
+      }, 1500);
     }
 
     function toggleAddForm(show) {
-      addForm.style.display = show ? 'block' : 'none';
+      if (show) {
+        document.getElementById('selectedDate').value = selectedDate;
+        addForm.style.display = 'block';
+      } else {
+        addForm.style.display = 'none';
+      }
     }
 
-    backBtn.onclick = () => {
-      if (currentView === 'year') {
-        currentYear--;
-        showYears();
-      } else if (currentView === 'months-grid') {
-        currentYear--;
-        showMonthsGrid(currentYear);
-      } else if (currentView === 'day') {
-        currentMonthOffset--;
-        loadCalendar(currentMonthOffset);
+    // Приём данных от бота
+    window.addEventListener("message", function(event) {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.action === "sync") {
+          serverData = data.entries || [];
+        }
+      } catch (e) {
+        console.error("Ошибка парсинга данных:", e);
       }
-    };
+    });
 
-    nextBtn.onclick = () => {
-      if (currentView === 'year') {
-        currentYear++;
-        showYears();
-      } else if (currentView === 'months-grid') {
-        currentYear++;
-        showMonthsGrid(currentYear);
-      } else if (currentView === 'day') {
-        currentMonthOffset++;
-        loadCalendar(currentMonthOffset);
-      }
-    };
-
-    function syncData() {
-      const tg = window.Telegram.WebApp;
-      const user = tg.initDataUnsafe?.user;
-
-      if (!user) return;
-
-      tg.sendData(JSON.stringify({
-        action: "sync",
-        user_id: user.id
-      }));
-    }
-
+    // Загрузка начальной страницы
     window.addEventListener("load", () => {
-      showYears();
-      renderStats();
-      syncData();
+      fetchServerData(() => {
+        showYears();
+      });
     });
   </script>
 </body>
