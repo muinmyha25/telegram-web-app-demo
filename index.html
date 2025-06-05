@@ -139,9 +139,9 @@
   </main>
 
   <script>
-    console.log("Проверка localStorage:", JSON.parse(localStorage.getItem(`calendarEntries_${userId}`) || "[]"));
     const tg = window.Telegram.WebApp;
     tg.ready();
+    console.log("Проверка localStorage:", JSON.parse(localStorage.getItem(`calendarEntries_${userId}`) || "[]"));
 
     const calendarEl = document.getElementById('calendar');
     const statsEl = document.getElementById('stats');
