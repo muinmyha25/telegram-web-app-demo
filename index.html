@@ -73,11 +73,11 @@
 
     /* Месяца */
     .month {
-      width: calc(33.33%); /* 3 колонки */
+      width: calc(33.33%);
       margin-bottom: 16px;
     }
     .calendar {
-      grid-template-columns: repeat(3, 1fr); /* 3 колонки */
+      grid-template-columns: repeat(3, 1fr);
     }
 
     /* Месяц с записями */
@@ -134,14 +134,12 @@
       <button onclick="saveEntry()">Сохранить</button>
     </div>
 
-    <!-- Статистика -->
     <div class="stats" id="stats"></div>
   </main>
 
   <script>
     const tg = window.Telegram.WebApp;
     tg.ready();
-    console.log("Проверка localStorage:", JSON.parse(localStorage.getItem(`calendarEntries_${userId}`) || "[]"));
 
     const calendarEl = document.getElementById('calendar');
     const statsEl = document.getElementById('stats');
@@ -152,33 +150,21 @@
 
     let currentView = 'year'; // year | months-grid | day
     let currentYear = new Date().getFullYear();
-    let currentMonthOffset = 0;
+    let currentMonthOffset = 0; // offset from current month
     let selectedMonth = new Date().getMonth(); // 0-11
     let selectedDate = '';
     const user = tg.initDataUnsafe?.user;
     const userId = user ? user.id : 'unknown';
-
     let serverData = [];
 
-    // Получаем данные с бота
-    function fetchServerData(callback) {
-      tg.sendData(JSON.stringify({ action: "sync", user_id: userId }));
-      callback && setTimeout(callback, 500); // имитация асинхронного ответа
+    function updateNavVisibility() {
+      backBtn.style.display = currentView === 'day' ? 'inline-block' : 'none';
+      nextBtn.style.display = currentView === 'day' ? 'inline-block' : 'none';
     }
 
-    // Обновляем статистику по пользователю
-    function updateGlobalStats() {
-      const totalIncome = serverData.reduce((sum, e) => sum + (e.income - e.expenses), 0);
-
-      statsEl.innerHTML = `
-        <h4>Статистика за всё время</h4>
-        <p>Общий доход: ${totalIncome.toFixed(2)} ₽</p>
-      `;
-    }
-
-    // Показываем годы
     function showYears() {
       currentView = 'year';
+      updateNavVisibility();
       monthTitle.textContent = currentYear;
 
       calendarEl.innerHTML = '';
@@ -194,12 +180,12 @@
         calendarEl.appendChild(div);
       }
 
-      updateGlobalStats();
+      renderStatsForYear(currentYear);
     }
 
-    // Показываем месяцы
     function showMonthsGrid(year) {
       currentView = 'months-grid';
+      updateNavVisibility();
       monthTitle.textContent = year;
 
       calendarEl.innerHTML = '';
@@ -229,18 +215,13 @@
         calendarEl.appendChild(div);
       }
 
-      // Статистика за год
-      const yearEntries = serverData.filter(e => e.date.startsWith(year));
-      const totalIncome = yearEntries.reduce((sum, e) => sum + (e.income - e.expenses), 0);
-      statsEl.innerHTML = `
-        <h4>Статистика за ${year}</h4>
-        <p>Доход за год: ${totalIncome.toFixed(2)} ₽</p>
-      `;
+      renderStatsForYear(year);
     }
 
-    // Календарь с днями
     function loadCalendar(monthOffset = 0) {
       currentView = 'day';
+      updateNavVisibility();
+
       const now = new Date();
       now.setMonth(now.getMonth() + monthOffset);
       const year = now.getFullYear();
@@ -284,7 +265,6 @@
 
         div.onclick = () => {
           selectedDate = dateStr;
-          selectedDateEl.value = dateStr;
           toggleAddForm(true);
         };
 
@@ -301,7 +281,6 @@
 
       if (!time) return alert('Введите время');
 
-      // Отправляем данные боту
       const entry = {
         action: "new_entry",
         user_id: userId,
@@ -313,12 +292,11 @@
       };
 
       tg.sendData(JSON.stringify(entry));
-
-      // Локальное обновление
       serverData.push(entry);
-      renderEntries();
-      loadCalendar(currentMonthOffset);
-      toggleAddForm(false);
+
+      document.getElementById('time').value = '';
+      document.getElementById('income').value = '';
+      document.getElementById('expenses').value = '';
 
       // Уведомление о сохранении
       const tempDiv = document.createElement('div');
@@ -342,15 +320,10 @@
     }
 
     function toggleAddForm(show) {
-      if (show) {
-        document.getElementById('selectedDate').value = selectedDate;
-        addForm.style.display = 'block';
-      } else {
-        addForm.style.display = 'none';
-      }
+      addForm.style.display = show ? 'block' : 'none';
     }
 
-    // Приём данных от бота
+    // Получаем данные от бота
     window.addEventListener("message", function(event) {
       try {
         const data = JSON.parse(event.data);
@@ -358,15 +331,38 @@
           serverData = data.entries || [];
         }
       } catch (e) {
-        console.error("Ошибка парсинга данных:", e);
+        console.error("Ошибка парсинга:", e);
       }
     });
 
-    // Загрузка начальной страницы
+    function fetchServerData(callback) {
+      tg.sendData(JSON.stringify({ action: "sync", user_id: userId }));
+      callback && setTimeout(callback, 500); // имитация асинхронного ответа
+    }
+
+    function renderStatsForYear(year) {
+      const yearEntries = serverData.filter(e => e.date.startsWith(year));
+      const totalIncome = yearEntries.reduce((sum, e) => sum + (e.income - e.expenses), 0);
+      statsEl.innerHTML = `
+        <h4>Статистика за ${year}</h4>
+        <p>Доход за год: ${totalIncome.toFixed(2)} ₽</p>
+      `;
+    }
+
+    function syncData() {
+      const tg = window.Telegram.WebApp;
+      const user = tg.initDataUnsafe?.user;
+      if (!user) return;
+      tg.sendData(JSON.stringify({
+        action: "sync",
+        user_id: user.id
+      }));
+    }
+
     window.addEventListener("load", () => {
-      fetchServerData(() => {
-        showYears();
-      });
+      showYears();
+      renderStatsForYear(currentYear);
+      syncData();
     });
   </script>
 </body>
