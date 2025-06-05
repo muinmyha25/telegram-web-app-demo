@@ -1,6 +1,6 @@
 
 // Укажи URL своего сервера (ngrok, VPS, Render и т.д.)
-const API_URL = "https://muinmyha25.github.io/telegram-web-app-demo"";  // заменить на свой URL
+const API_URL = "https://abcd1234.ngrok.io";  // замени на свой ngrok-URL
 
 document.addEventListener("DOMContentLoaded", () => {
     let telegramId = null;
