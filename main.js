@@ -1,20 +1,23 @@
+// Укажи URL своего сервера
+const API_URL = "http://127.0.0.1:5000";  // Замени на свой URL
+
 document.addEventListener("DOMContentLoaded", async () => {
   const yearPicker = document.getElementById("yearPicker");
   const totalEarnings = document.getElementById("totalEarnings");
   const totalExpenses = document.getElementById("totalExpenses");
 
-  // Получаем API URL из localStorage или передайте его через window.Telegram.WebApp.initData
-  const API_URL = "http://127.0.0.1:5000"; // или получите из env или WebApp
-
-  try {
-    const response = await fetch(`${API_URL}/api/stats`);
-    const data = await response.json();
-    totalEarnings.textContent = `${data.totalEarnings} ₽`;
-    totalExpenses.textContent = `${data.totalExpenses} ₽`;
-  } catch (err) {
-    console.error("Ошибка загрузки статистики:", err);
-    totalEarnings.textContent = "Ошибка";
-    totalExpenses.textContent = "Ошибка";
+  // Загрузка данных
+  async function loadStats() {
+    try {
+      const response = await fetch(`${API_URL}/api/stats`);
+      const data = await response.json();
+      totalEarnings.textContent = `${data.totalEarnings} ₽`;
+      totalExpenses.textContent = `${data.totalExpenses} ₽`;
+    } catch (err) {
+      console.error("Ошибка загрузки данных:", err);
+      totalEarnings.textContent = "Ошибка";
+      totalExpenses.textContent = "Ошибка";
+    }
   }
 
   // Генерация списка годов
@@ -27,4 +30,35 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   yearPicker.value = currentYear;
+
+  // Отправка формы
+  document.getElementById("recordForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const income = document.querySelector("[name=income]").value || 0;
+    const expense = document.querySelector("[name=expense]").value || 0;
+    const note = document.querySelector("[name=note]").value;
+
+    try {
+      const response = await fetch(`${API_URL}/api/add`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ income, expense, note })
+      });
+
+      if (response.ok) {
+        alert("Запись успешно сохранена!");
+        loadStats(); // Обновляем статистику
+        document.getElementById("recordForm").reset();
+      } else {
+        alert("Ошибка сохранения");
+      }
+    } catch (err) {
+      console.error("Ошибка отправки:", err);
+      alert("Не удалось отправить данные");
+    }
+  });
+
+  // Загружаем статистику при запуске
+  await loadStats();
 });
